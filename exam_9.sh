@@ -6,5 +6,5 @@ then
 	sed -n "$1,$ p" stderr.txt
 else
 	t=$(($2-1))
-	sed -n "$1,$tp" stderr.txt
+	sed -n "$1,$t p" stderr.txt
 fi
