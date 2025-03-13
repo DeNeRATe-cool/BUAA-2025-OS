@@ -3,7 +3,8 @@ then
 	cat stderr.txt
 elif [[ $# -eq 1 ]]
 then
-	sed -n "$1,$p" stderr.txt
+	sed -n "$1,$ p" stderr.txt
 else
-	sed -n "$1,$2p" stderr.txt
+	t=$(($2-1))
+	sed -n "$1,$tp" stderr.txt
 fi
