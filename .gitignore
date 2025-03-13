@@ -1,0 +1,7 @@
+*
+!.gitignore
+!init.sh
+!clean.sh
+!exam_[1-9].sh
+!run_exam.sh
+!Makefile
