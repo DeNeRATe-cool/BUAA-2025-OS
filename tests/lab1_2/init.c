@@ -1,3 +1,37 @@
+static void printk_check_position(void) {
+	printk("### check_position ###\n");
+	printk("%s%P%s", "This is a testcase: ", 2, 5, "\n");
+	printk("the position is %P, size = %d\n", 1, 9, 9 - 1);
+}
+
+static void printk_check_range(void) {
+	printk("### check_range ###\n");
+	printk("%s%z%s", "This is a testcase: ", 2023, 2023, "\n");
+	printk("the range is %z, size = %d\n", 1, 9, 9 - 1);
+	printk("the range is %-5lz\n", 66, 88);
+	printk("the range is %05z\n", 1, 100000);
+}
+
+typedef struct {
+	int a; char b; char c; int d;
+} test_s1;
+
+typedef struct {
+	int size; int c[10];
+} test_s2;
+
+static void printk_check_jJ(void) {
+	test_s1 s11 = {10, '*', 'd', 100000};
+	test_s1 s12 = {-10, 'r', '$', -100000};
+	test_s2 s21 = {3, {1, 2, 3}};
+	test_s2 s22 = {5, {-1, -100000, 23, -6, 88888}};
+	printk("### check_struct ###\n");
+	printk("%5j\n", &s11);
+	printk("%5j\n", &s12);
+	printk("%5J\n", &s21);
+	printk("%5J\n", &s22);
+} 
+
 static void printk_1_check(void) {
 	printk("%5d\n", 999999);
 	printk("%5d\n", 12);
@@ -105,5 +139,8 @@ void mips_init(u_int argc, char **argv, char **penv, u_int ram_low_size) {
 	printk_1_check();
 	printk_2_check();
 	printk_3_check();
+	printk_check_jJ();
+	printk_check_range();
+	printk_check_position();
 	halt();
 }
