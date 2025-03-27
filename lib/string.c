@@ -104,7 +104,6 @@ FILE *fmemopen(FILE *stream, void *buf, const char *mode) {
 		f -> ptr = (char *)(buf);
 		f -> base = (char *)(buf);
 		f -> end = (char *)(buf);
-		f -> ptr = '\0';
 		return stream;
 	} else if(strcmp(mode, "a") == 0) {
 		f -> base = (char *)(buf);
@@ -136,12 +135,12 @@ int fmemprintf(FILE *stream, const char *fmt, ...) {
 int fseek(FILE *stream, long offset, int fromwhere) {
 	char * a = NULL;
 	if(fromwhere == SEEK_SET) {
-		a = (stream -> base) +  offset;
+		a = (stream -> base) + offset;
 	} else if(fromwhere == SEEK_CUR) {
 		a = (stream -> ptr) + offset;
 	} else if(fromwhere == SEEK_END) {
 		a = (stream -> end) + offset;
-	}
+	} else return -1;
 	if((stream -> base) <= a && a <= (stream -> end)) {
 		stream -> ptr = a;
 		return 0;
