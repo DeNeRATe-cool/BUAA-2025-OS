@@ -77,6 +77,21 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
 
 		neg_flag = 0;
 		switch (*fmt) {
+		case 'k':
+		case 'K':
+			long v;
+			char * str = (char *)va_arg(ap, char *);
+			if(long_flag) {
+				v = va_arg(ap, long int);
+			} else {
+				v = va_arg(ap, int);
+			}
+			print_str(out, data, str, width, ladjust);
+			print_str(out, data, " => ", 0, 0);
+			neg_flag = 0;
+			if(v < 0) v = -v, neg_flag = 1;
+			print_num(out, data, v, 10, neg_flag, width, ladjust, padc, 0);
+			break;
 		case 'p':
 		case 'P':
 		/*
@@ -241,7 +256,7 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
 			break;
 
 		case 'x':
-			if (long_flag) {
+			if (long_flag) { 
 				num = va_arg(ap, long int);
 			} else {
 				num = va_arg(ap, int);
@@ -253,7 +268,7 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
 			if (long_flag) {
 				num = va_arg(ap, long int);
 			} else {
-				num = va_arg(ap, int);
+				num = va_arg(ap, int); 
 			}
 			print_num(out, data, num, 16, 0, width, ladjust, padc, 1);
 			break;
