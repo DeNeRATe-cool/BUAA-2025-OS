@@ -100,12 +100,13 @@ int strcmp(const char *p, const char *q) {
 
 FILE *fmemopen(FILE *stream, void *buf, const char *mode) {
 	FILE * f = stream;
-	if((*mode) == 'w') {
+	if(strcmp(mode, "w") == 0) {
 		f -> ptr = (char *)(buf);
 		f -> base = (char *)(buf);
 		f -> end = (char *)(buf);
+		f -> ptr = '\0';
 		return stream;
-	} else if((*mode) == 'a') {
+	} else if(strcmp(mode, "a") == 0) {
 		f -> base = (char *)(buf);
 		f -> ptr = (char *)(buf) + strlen(buf);
 		f -> end = (char *)(buf) + strlen(buf);
