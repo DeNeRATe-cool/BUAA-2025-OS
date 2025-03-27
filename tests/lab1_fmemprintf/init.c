@@ -11,6 +11,8 @@ void fmemprintf_1_check(void) {
 		r[1] = fmemprintf(stream, "%s", "Hel");
 		fseek(stream, 0, SEEK_END);
 		r[2] = fmemprintf(stream, "%c", '!');
+		fseek(stream, 2, SEEK_SET);
+		int x = fmemprintf(stream, "~~~s%dsdsd %csdsd %s", 10, 'a', "6666666");
 		fclose(stream);
 		printk("%d %d %d\n", r[0], r[1], r[2]);
 		printk("%s\n", buffer);

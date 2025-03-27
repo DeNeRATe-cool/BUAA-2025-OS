@@ -114,8 +114,8 @@ FILE *fmemopen(FILE *stream, void *buf, const char *mode) {
 }
 
 void outputf(void *data, const char *buf, size_t len) {
-	FILE * f = data;
-	for(size_t i = 0; i < len; i++) {
+	FILE * f = (FILE *)data;
+	for(int i = 0; i < len; i++) {
 		*(f -> ptr) = buf[i];
 		(f -> ptr) ++;
 		if((f -> end) < (f -> ptr))
