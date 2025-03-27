@@ -9,6 +9,15 @@ void outputk(void *data, const char *buf, size_t len) {
 	}
 }
 /* End of Key Code "outputk" */
+//void outputf(void *data, const char *buf, size_t len) {
+//	FILE * f = data;
+//	for(size_t i = 0; i < len; i++) {
+//		*(f -> ptr) = buf[i];
+//		(f -> ptr)++;
+//		if((f -> end) < (f -> ptr))
+//			f -> end = f -> ptr;
+//	}
+//}
 
 /* Lab 1 Key Code "printk" */
 void printk(const char *fmt, ...) {

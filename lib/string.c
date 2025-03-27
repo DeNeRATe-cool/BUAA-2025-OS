@@ -1,4 +1,6 @@
 #include <types.h>
+#include <print.h>
+#include <stream.h>
 
 void *memcpy(void *dst, const void *src, size_t n) {
 	void *dstaddr = dst;
@@ -93,5 +95,61 @@ int strcmp(const char *p, const char *q) {
 		return 1;
 	}
 
+	return 0;
+}
+
+FILE *fmemopen(FILE *stream, void *buf, const char *mode) {
+	FILE * f = stream;
+	if((*mode) == 'w') {
+		f -> ptr = (char *)(buf);
+		f -> base = (char *)(buf);
+		f -> end = (char *)(buf);
+		return stream;
+	} else if((*mode) == 'a') {
+		f -> base = (char *)(buf);
+		f -> ptr = (char *)(buf) + strlen(buf);
+		f -> end = (char *)(buf) + strlen(buf);
+		return stream;
+	} else return NULL;
+}
+
+void outputf(void *data, const char *buf, size_t len) {
+	FILE * f = data;
+	for(size_t i = 0; i < len; i++) {
+		*(f -> ptr) = buf[i];
+		(f -> ptr) ++;
+		if((f -> end) < (f -> ptr))
+			f -> end = f -> ptr;
+	}
+}
+
+int fmemprintf(FILE *stream, const char *fmt, ...) {
+	char * begin = stream -> ptr;
+	va_list ap;
+	va_start(ap, fmt);
+	vprintfmt(outputf, stream, fmt, ap);
+	va_end(ap);
+	return (int)((stream -> ptr) - begin);
+}
+
+int fseek(FILE *stream, long offset, int fromwhere) {
+	char * a = NULL;
+	if(fromwhere == SEEK_SET) {
+		a = (stream -> base) +  offset;
+	} else if(fromwhere == SEEK_CUR) {
+		a = (stream -> ptr) + offset;
+	} else if(fromwhere == SEEK_END) {
+		a = (stream -> end) + offset;
+	}
+	if((stream -> base) <= a && a <= (stream -> end)) {
+		stream -> ptr = a;
+		return 0;
+	} else {
+		return -1;
+	}
+}
+
+int fclose(FILE *stream) {
+	stream -> end = '\0';
 	return 0;
 }
