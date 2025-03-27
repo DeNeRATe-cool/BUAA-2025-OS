@@ -150,6 +150,6 @@ int fseek(FILE *stream, long offset, int fromwhere) {
 }
 
 int fclose(FILE *stream) {
-	stream -> end = '\0';
+	*(stream -> end) = '\0';
 	return 0;
 }
