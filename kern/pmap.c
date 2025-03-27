@@ -132,13 +132,16 @@ int page_alloc(struct Page **new) {
 	/* Step 1: Get a page from free memory. If fails, return the error code.*/
 	struct Page *pp;
 	/* Exercise 2.4: Your code here. (1/2) */
-
+	if(LIST_EMPTY(&page_free_list)) {
+		return -E_NO_MEM;
+	}
+	pp = LIST_FIRST(&page_free_list);
 	LIST_REMOVE(pp, pp_link);
 
 	/* Step 2: Initialize this page with zero.
 	 * Hint: use `memset`. */
 	/* Exercise 2.4: Your code here. (2/2) */
-
+	memset((void *)page2kva(pp), 0, PAGE_SIZE);
 	*new = pp;
 	return 0;
 }
@@ -153,7 +156,7 @@ void page_free(struct Page *pp) {
 	assert(pp->pp_ref == 0);
 	/* Just insert it into 'page_free_list'. */
 	/* Exercise 2.5: Your code here. */
-
+	LIST_INSERT_HEAD(&page_free_list, pp, pp_link);
 }
 
 /* Overview:
