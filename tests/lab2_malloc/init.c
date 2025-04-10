@@ -91,6 +91,13 @@ void malloc_test() {
 	printk("malloc_test() is done\n");
 }
 
+void malloc_test2() {
+	void *p1 = malloc(32);
+void *p2 = malloc(40);
+printk("p1:%x p2:%x\n", (int)p1, (int)p2);
+free(p1);
+}
+
 void mips_init(u_int argc, char **argv, char **penv, u_int ram_low_size) {
 	printk("init.c:\tmips_init() is called\n");
 
@@ -100,5 +107,6 @@ void mips_init(u_int argc, char **argv, char **penv, u_int ram_low_size) {
 	malloc_init();
 
 	malloc_test();
+	malloc_test2();
 	halt();
 }

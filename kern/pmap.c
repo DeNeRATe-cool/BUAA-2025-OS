@@ -518,3 +518,95 @@ void page_check(void) {
 
 	printk("page_check() succeeded!\n");
 }
+
+#include <malloc.h>
+
+struct MBlock_list mblock_list;
+
+void malloc_init() {
+
+	printk("malloc_init begin\n");
+
+	LIST_INIT(&mblock_list);
+
+	struct MBlock *heap_begin = (struct MBlock*) HEAP_BEGIN;
+
+	printk("heap_begin: 0x%X\n", heap_begin);
+
+	heap_begin->size = HEAP_SIZE - MBLOCK_SIZE;
+	heap_begin->ptr = (void*) heap_begin->data;
+	heap_begin->free = 1;
+
+	LIST_INSERT_HEAD(&mblock_list, heap_begin, mb_link);
+
+	printk("malloc_init end\n");
+
+}
+
+void *malloc(size_t size) {
+	/* Your Code Here (1/2) */
+	size = ROUND(size, 8);
+	struct MBlock * block;
+	LIST_FOREACH(block, &mblock_list, mb_link) {
+		//
+		// printk("%d %d\n", block -> size, block -> free);
+		//
+		if((block -> size) >= size && (block -> free)) {
+			size_t remain = (block -> size) - size;
+			if(remain < MBLOCK_SIZE + 8) {
+				size += MBLOCK_SIZE + 8;
+				block -> free = 0;
+				
+				return (void *)(block -> data);
+			} else {
+				block -> free = 0;
+				
+				struct MBlock * now = (struct MBlock *)((block -> data) + (size));
+				now -> size = (block -> size) - MBLOCK_SIZE - size;
+				now -> ptr = (void *)(now -> data);
+				now -> free = 1;
+				// printk("now: %d\n", now -> size);
+				LIST_INSERT_AFTER(block, now, mb_link);
+
+				block -> size = size;
+				// printk("%d %d\n", block -> size, now -> size);
+				return (void *)(block -> data);
+			}
+
+		}
+	}
+	return NULL;
+}
+
+void free(void *p) {
+	/* Your Code Here (2/2) */
+	if((u_int)p > HEAP_BEGIN + HEAP_SIZE || (u_int)p < HEAP_BEGIN + MBLOCK_SIZE) return;
+	void * cur = p - MBLOCK_SIZE;
+	struct MBlock * block;
+	LIST_FOREACH(block, &mblock_list, mb_link) {
+		if((block -> ptr) == p && (block -> ptr) == (void *)(block -> data)) {
+			block -> free = 1;
+			if(LIST_NEXT(block, mb_link) != NULL) {
+				struct MBlock * nxt = LIST_NEXT(block, mb_link);
+				if(nxt -> free) {
+					block -> size += nxt -> size + MBLOCK_SIZE;
+					block -> free = 1;
+					LIST_REMOVE(nxt, mb_link);
+				}
+			}
+			
+			if(LIST_FIRST(&mblock_list) != block) {
+				struct MBlock * pre;
+				LIST_FOREACH(pre, &mblock_list, mb_link) {
+					if(LIST_NEXT(pre, mb_link) == block) {
+						break;
+					}
+				}
+				pre -> size += block -> size + MBLOCK_SIZE;
+				LIST_REMOVE(block, mb_link);
+			}
+
+			break;	
+		}
+	}
+}
