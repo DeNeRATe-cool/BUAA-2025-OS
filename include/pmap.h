@@ -70,6 +70,7 @@ void page_decref(struct Page *pp);
 int page_insert(Pde *pgdir, u_int asid, struct Page *pp, u_long va, u_int perm);
 struct Page *page_lookup(Pde *pgdir, u_long va, Pte **ppte);
 void page_remove(Pde *pgdir, u_int asid, u_long va);
+u_int page_conditional_remove(Pde *pgdir, u_int asid, u_int perm_mask, u_long begin_va, u_long end_va);
 
 extern struct Page *pages;
 

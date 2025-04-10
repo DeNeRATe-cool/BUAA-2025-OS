@@ -16,6 +16,27 @@ static u_long freemem;
 
 struct Page_list page_free_list; /* Free list of physical pages */
 
+u_int page_conditional_remove(Pde *pgdir, u_int asid, u_int perm_mask, u_long begin_va, u_long end_va) {
+	u_int cnt = 0;
+	u_int ld = PDX(begin_va), rd = PDX(end_va);
+	u_int lp = PTX(begin_va), rp = PTX(end_va);
+	for(int i = ld; i <= rd; i++) {
+		u_int now = pgdir[i];
+		if(!(now & PTE_V)) continue;
+		Pte * pgtable = (Pte *)(KADDR(PTE_ADDR(now)));
+		u_int l = (i == ld ? lp : 0), r = (i == rd ? rp : 1024);
+		for(int j = l; j < r; j++) {
+			u_int entry = pgtable[j];
+			if(!(entry & PTE_V)) continue;
+			if((PTE_FLAGS(entry) & perm_mask) != 0) {
+				cnt++;
+				page_remove(pgdir, asid, (i << 22) | (j << 12));
+			}
+		}
+	}
+	return cnt;
+}
+
 /* Overview:
  *   Use '_memsize' from bootloader to initialize 'memsize' and
  *   calculate the corresponding 'npage' value.
