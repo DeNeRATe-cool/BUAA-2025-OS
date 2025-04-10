@@ -549,7 +549,7 @@ void *malloc(size_t size) {
 	struct MBlock * block;
 	LIST_FOREACH(block, &mblock_list, mb_link) {
 		//
-		// printk("%d %d\n", block -> size, block -> free);
+		//printk("%d %d\n", block -> size, MBLOCK_SIZE);
 		//
 		if((block -> size) >= size && (block -> free)) {
 			size_t remain = (block -> size) - size;
@@ -581,10 +581,10 @@ void *malloc(size_t size) {
 void free(void *p) {
 	/* Your Code Here (2/2) */
 	if((u_int)p > HEAP_BEGIN + HEAP_SIZE || (u_int)p < HEAP_BEGIN + MBLOCK_SIZE) return;
-	void * cur = p - MBLOCK_SIZE;
-	struct MBlock * block;
-	LIST_FOREACH(block, &mblock_list, mb_link) {
-		if((block -> ptr) == p && (block -> ptr) == (void *)(block -> data)) {
+	struct MBlock * block = (struct MBlock *)(p - MBLOCK_SIZE);
+	if(!(block -> ptr == block -> data)) return;
+//	LIST_FOREACH(block, &mblock_list, mb_link) {
+//		if((block -> ptr) == p && (block -> ptr) == (void *)(block -> data)) {
 			block -> free = 1;
 			if(LIST_NEXT(block, mb_link) != NULL) {
 				struct MBlock * nxt = LIST_NEXT(block, mb_link);
@@ -592,6 +592,11 @@ void free(void *p) {
 					block -> size += nxt -> size + MBLOCK_SIZE;
 					block -> free = 1;
 					LIST_REMOVE(nxt, mb_link);
+					(nxt -> mb_link).le_next = NULL;
+					(nxt -> mb_link).le_prev = NULL;
+					(nxt -> free) = 0;
+					(nxt -> ptr) = NULL;
+
 				}
 			}
 			
@@ -602,11 +607,16 @@ void free(void *p) {
 						break;
 					}
 				}
+				if(!(pre -> free)) return;
 				pre -> size += block -> size + MBLOCK_SIZE;
 				LIST_REMOVE(block, mb_link);
+				(block -> mb_link).le_next = NULL;
+				(block -> mb_link).le_prev = NULL;
+				(block -> free) = 0;
+				(block -> ptr) = NULL;
 			}
 
-			break;	
-		}
-	}
+	//		break;	
+	//	}
+	//}
 }

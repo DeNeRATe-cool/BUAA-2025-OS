@@ -106,7 +106,7 @@ void mips_init(u_int argc, char **argv, char **penv, u_int ram_low_size) {
 	page_init();
 	malloc_init();
 
-	malloc_test();
+//	malloc_test();
 	malloc_test2();
 	halt();
 }
