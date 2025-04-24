@@ -36,3 +36,5 @@ BUILD_HANDLER sys do_syscall
 #endif
 
 BUILD_HANDLER reserved do_reserved
+BUILD_HANDLER adel do_adel
+BUILD_HANDLER ades do_ades
