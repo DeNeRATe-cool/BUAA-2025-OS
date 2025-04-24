@@ -16,7 +16,32 @@
  */
 void schedule(int yield) {
 	static int count = 0; // remaining time slices of current env
+	static struct Env * lstenv = NULL;
 	struct Env *e = curenv;
+	static int clock = -1;
+	clock += 1;
+
+	u_int mn = 0xffffffff;
+	struct Env * newenv = NULL;
+	struct Env * env_i;
+	LIST_FOREACH(env_i, &env_edf_sched_list, env_edf_sched_link) {
+		if(clock >= (env_i -> env_period_deadline - env_i -> env_edf_period) &&clock < (env_i -> env_period_deadline && env_i -> env_runtime_left != 0)) {
+			if(env_i -> env_period_deadline < mn) {
+				newenv = env_i;
+				mn = env_i -> env_period_deadline;
+			}
+		}
+	}
+	if(newenv != NULL) {
+		e = newenv;
+		e -> env_runtime_left -= 1;
+		if(e -> env_runtime_left == 0) {
+			e -> env_period_deadline += e -> env_edf_period;
+			e -> env_runtime_left = e -> env_edf_runtime;
+		}
+		env_run(e);
+		return;
+	}
 
 	/* We always decrease the 'count' by 1.
 	 *
@@ -36,6 +61,7 @@ void schedule(int yield) {
 	 */
 	/* Exercise 3.12: Your code here. */
 	count--;
+	e = lstenv;
 	if(yield || !count || e == NULL || e -> env_status != ENV_RUNNABLE) {
 		if(e != NULL && e -> env_status == ENV_RUNNABLE) {
 			TAILQ_REMOVE(&env_sched_list, e, env_sched_link);
@@ -46,6 +72,7 @@ void schedule(int yield) {
 		}
 		e = TAILQ_FIRST(&env_sched_list);
 		count = e -> env_pri;
+		lstenv = e;
 	}
 	env_run(e);
 }
