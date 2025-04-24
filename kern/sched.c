@@ -24,10 +24,16 @@ void schedule(int yield) {
 	u_int mn = 0xffffffff;
 	struct Env * newenv = NULL;
 	struct Env * env_i;
+	u_int id = 0xffffffff;
 	LIST_FOREACH(env_i, &env_edf_sched_list, env_edf_sched_link) {
-		if(clock >= (env_i -> env_period_deadline - env_i -> env_edf_period) &&clock < (env_i -> env_period_deadline && env_i -> env_runtime_left != 0)) {
-			if(env_i -> env_period_deadline < mn) {
+		if(env_i -> env_period_deadline == clock) {
+			env_i -> env_period_deadline += env_i -> env_edf_period;
+			env_i -> env_runtime_left = env_i -> env_edf_runtime;
+		}
+		if(clock >= (env_i -> env_period_deadline - env_i -> env_edf_period) && clock < (env_i -> env_period_deadline) && env_i -> env_runtime_left != 0) {
+			if(env_i -> env_period_deadline < mn || (env_i -> env_period_deadline == mn && env_i -> env_id < id)) {
 				newenv = env_i;
+				id = env_i -> env_id;
 				mn = env_i -> env_period_deadline;
 			}
 		}
