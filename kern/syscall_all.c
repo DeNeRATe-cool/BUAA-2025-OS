@@ -522,7 +522,7 @@ int sys_shm_bind(int key, u_int va, u_int perm) {
 	if(shm_pool[key].open == 0)
 		return -E_SHM_NOT_OPEN;
 	for(int i = va, j = 0; i < va + shm_pool[key].npage * PAGE_SIZE; i += PAGE_SIZE, j += 1) {
-		try(page_insert(curenv -> env_pgdir, curenv -> env_asid, shm_pool[key].pages[j], va, perm));
+		try(page_insert(curenv -> env_pgdir, curenv -> env_asid, shm_pool[key].pages[j], i, perm));
 	}
 	return 0;
 }
@@ -536,7 +536,7 @@ int sys_shm_unbind(int key, u_int va) {
 	if(shm_pool[key].open == 0)
 		return -E_SHM_NOT_OPEN;
 	for(int i = va, j = 0; i < va + shm_pool[key].npage * PAGE_SIZE; i += PAGE_SIZE, j += 1) {
-		page_remove(curenv -> env_pgdir, curenv -> env_asid, va);
+		page_remove(curenv -> env_pgdir, curenv -> env_asid, i);
 	}
 	return 0;
 }
