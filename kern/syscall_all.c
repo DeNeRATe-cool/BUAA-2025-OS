@@ -5,6 +5,7 @@
 #include <printk.h>
 #include <sched.h>
 #include <syscall.h>
+#include <shm.h>
 
 extern struct Env *curenv;
 
@@ -478,6 +479,83 @@ int sys_read_dev(u_int va, u_int pa, u_int len) {
 	return 0;
 }
 
+struct Shm shm_pool[N_SHM];
+
+int sys_shm_new(u_int npage) {
+	if (npage == 0 || npage > N_SHM_PAGE) {
+		return -E_SHM_INVALID;
+	}
+
+	// Lab4-Extra: Your code here. (5/8)
+	int t = -1;
+	for(int i = 0; i < N_SHM; i++) {
+		if(shm_pool[i].open == 0) {
+			t = i;
+			break;
+		}
+	}
+	if(t == -1)
+		return -E_SHM_INVALID;
+// page_alloc(&pp) != 0;
+	for(int i = 0; i < npage; i++) {
+		struct Page * pp;
+		if(page_alloc(&pp) != 0) {
+			for(int j = 0; j < i; j++) {
+				page_decref(shm_pool[t].pages[j]);
+			}
+			return -E_NO_MEM;
+		}
+		shm_pool[t].pages[i] = pp;
+		pp -> pp_ref += 1;
+	}
+	shm_pool[t].npage = npage;
+	shm_pool[t].open = 1;
+	return t;
+}
+
+int sys_shm_bind(int key, u_int va, u_int perm) {
+	if (key < 0 || key >= N_SHM) {
+		return -E_SHM_INVALID;
+	}
+
+	// Lab4-Extra: Your code here. (6/8)
+	if(shm_pool[key].open == 0)
+		return -E_SHM_NOT_OPEN;
+	for(int i = va, j = 0; i < va + shm_pool[key].npage * PAGE_SIZE; i += PAGE_SIZE, j += 1) {
+		try(page_insert(curenv -> env_pgdir, curenv -> env_asid, shm_pool[key].pages[j], va, perm));
+	}
+	return 0;
+}
+
+int sys_shm_unbind(int key, u_int va) {
+	if (key < 0 || key >= N_SHM) {
+		return -E_SHM_INVALID;
+	}
+
+	// Lab4-Extra: Your code here. (7/8)
+	if(shm_pool[key].open == 0)
+		return -E_SHM_NOT_OPEN;
+	for(int i = va, j = 0; i < va + shm_pool[key].npage * PAGE_SIZE; i += PAGE_SIZE, j += 1) {
+		page_remove(curenv -> env_pgdir, curenv -> env_asid, va);
+	}
+	return 0;
+}
+
+int sys_shm_free(int key) {
+	if (key < 0 || key >= N_SHM) {
+		return -E_SHM_INVALID;
+	}
+
+	// Lab4-Extra: Your code here. (8/8)
+	if(shm_pool[key].open == 0) 
+		return -E_SHM_NOT_OPEN;
+	for(int i = 0; i < shm_pool[key].npage; i++) {
+		page_decref(shm_pool[key].pages[i]);
+	}
+	shm_pool[key].open = 0;
+	return 0;
+}
+
 void *syscall_table[MAX_SYSNO] = {
     [SYS_putchar] = sys_putchar,
     [SYS_print_cons] = sys_print_cons,
@@ -497,6 +575,10 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_cgetc] = sys_cgetc,
     [SYS_write_dev] = sys_write_dev,
     [SYS_read_dev] = sys_read_dev,
+    [SYS_shm_new] = sys_shm_new,
+    [SYS_shm_bind] = sys_shm_bind,
+    [SYS_shm_unbind] = sys_shm_unbind,
+    [SYS_shm_free] = sys_shm_free,
 };
 
 /* Overview:

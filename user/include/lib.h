@@ -69,6 +69,18 @@ int syscall_cgetc(void);
 int syscall_write_dev(void *va, u_int dev, u_int len);
 int syscall_read_dev(void *va, u_int dev, u_int len);
 
+// syscalls
+int syscall_shm_new(u_int npage);
+int syscall_shm_bind(int key, u_int va, u_int perm);
+int syscall_shm_unbind(int key, u_int va);
+int syscall_shm_free(int key);
+
+// shm.c
+int shm_new(u_int npage);
+int shm_bind(u_int key, void *va);
+int shm_unbind(u_int key, void *va);
+int shm_free(u_int key);
+
 // ipc.c
 void ipc_send(u_int whom, u_int val, const void *srcva, u_int perm);
 u_int ipc_recv(u_int *whom, void *dstva, u_int *perm);

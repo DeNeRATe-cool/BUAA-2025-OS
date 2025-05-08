@@ -22,6 +22,10 @@ enum {
 	SYS_cgetc,
 	SYS_write_dev,
 	SYS_read_dev,
+	SYS_shm_new,
+	SYS_shm_bind,
+	SYS_shm_unbind,
+	SYS_shm_free,
 	MAX_SYSNO,
 };
 
