@@ -74,3 +74,7 @@ int syscall_read_dev(void *va, u_int dev, u_int size) {
 	/* Exercise 5.2: Your code here. (2/2) */
 
 }
+
+int syscall_get_parent_envid(void) {
+	msyscall(SYS_get_ppid);
+}
