@@ -144,6 +144,11 @@ int dup(int oldfdnum, int newfdnum) {
 	ova = fd2data(oldfd);
 	nva = fd2data(newfd);
 	/* Step 5: Dunplicate the data and 'fd' self from old to new. */
+	/* if ((r = syscall_mem_map(0, oldfd, 0, newfd, vpt[VPN(oldfd)] & (PTE_D | PTE_LIBRARY))) <
+	    0) {
+		goto err;
+	} */
+
 	if (vpd[PDX(ova)]) {
 		for (i = 0; i < PDMAP; i += PTMAP) {
 			pte = vpt[VPN(ova + i)];
@@ -162,7 +167,6 @@ int dup(int oldfdnum, int newfdnum) {
 	    0) {
 		goto err;
 	}
-
 	return newfdnum;
 
 err:
@@ -191,25 +195,34 @@ int read(int fdnum, void *buf, u_int n) {
 	struct Dev *dev;
 	struct Fd *fd;
 	/* Exercise 5.10: Your code here. (1/4) */
-	if((r = fd_lookup(fdnum, &fd)) < 0 || (r = dev_lookup(fd -> fd_dev_id, &dev)) < 0) {
-	return r;
+	if ((r = fd_lookup(fdnum, &fd)) < 0) {
+		return r;
 	}
+
+	if ((r = dev_lookup(fd->fd_dev_id, &dev)) < 0) {
+		return r;
+	}
+
 	// Step 2: Check the open mode in 'fd'.
 	// Return -E_INVAL if the file is opened for writing only (O_WRONLY).
 	/* Exercise 5.10: Your code here. (2/4) */
-	if((fd -> fd_omode & O_ACCMODE) == O_WRONLY) {
+	if ((fd->fd_omode & O_ACCMODE) == O_WRONLY) {
 		return -E_INVAL;
 	}
+
 	// Step 3: Read from 'dev' into 'buf' at the seek position (offset in 'fd').
 	/* Exercise 5.10: Your code here. (3/4) */
-	r = dev -> dev_read(fd, buf, n, fd -> fd_offset);
+	r = dev->dev_read(fd, buf, n, fd->fd_offset);
+
 	// Step 4: Update the offset in 'fd' if the read is successful.
 	/* Hint: DO NOT add a null terminator to the end of the buffer!
 	 *  A character buffer is not a C string. Only the memory within [buf, buf+n) is safe to
 	 *  use. */
 	/* Exercise 5.10: Your code here. (4/4) */
-	if(r > 0)
-		fd -> fd_offset += r;
+	if (r > 0) {
+		fd->fd_offset += r;
+	}
+
 	return r;
 }
 
