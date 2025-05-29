@@ -34,22 +34,19 @@ int fsipc_key_set(u_int fileid) {
 
 	req = (struct Fsreq_key_set *)fsipcbuf;
 	req->req_fileid = fileid;
-	if((r = fsipc(FSREQ_KEY_SET, req, 0, 0)) < 0) return r;
-	return 0;
+	return fsipc(FSREQ_KEY_SET, req, 0, 0);
 }
 
 int fsipc_key_unset(void) {
   // 合理调用 fsipc 函数
 	int r;
-	if((r = fsipc(FSREQ_KEY_UNSET, 0, 0, 0)) < 0) return r;
-	return 0;
+	return fsipc(FSREQ_KEY_UNSET, 0, 0, 0);
 }
 
 int fsipc_key_isset(void) {
   // 合理调用 fsipc 函数
 	int r;
-	if((r = fsipc(FSREQ_KEY_UNSET, 0, 0, 0)) < 0) return r;
-	return 0;
+	return fsipc(FSREQ_KEY_ISSET, 0, 0, 0);
 }
 
 // Overview:
