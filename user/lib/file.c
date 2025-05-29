@@ -260,3 +260,31 @@ int remove(const char *path) {
 int sync(void) {
 	return fsipc_sync();
 }
+
+int fskey_set(int fdnum) {
+  // 使用 fd_lookup 找到对应的 Fd 结构体。判断传入的文件描述符是否合法
+  // 如果不合法返回 fd_lookup 函数的返回值（该函数除了0之外，只会返回 -E_INVAL 错误码，符合系统行为要求）
+	struct Fd *f;
+	void *key_block;
+	int r;
+	if((r = fd_lookup(fdnum, &f)) < 0) {
+		return r;
+	}
+  // 判断文件是否以加密方式打开，判断打开方式是否为只写
+  // 密钥文件要求以非加密且允许读的方式打开，不满足则返回 -E_INVAL
+	if(f -> fd_omode & O_ENCRYPT) return -E_INVAL;
+	if(f -> fd_omode & O_WRONLY) return -E_INVAL;
+  // 通过对 Fd 结构体进行处理获得 fileid ，合理调用相应文件系统 IPC 函数
+  	return fsipc_key_set(((struct Filefd *)(f)) -> f_fileid);
+}
+
+int fskey_unset() {
+  // 合理调用相应文件系统 IPC 函数
+	return fsipc_key_unset();
+}
+
+int fskey_isset() {
+  // 合理调用相应文件系统 IPC 函数
+	return fsipc_key_isset();
+}
+

@@ -3,6 +3,9 @@
 
 // OS error codes.
 
+#define E_INVALID_KEY_FILE 14
+#define E_BAD_KEY 15
+
 // Unspecified or unknown problem
 #define E_UNSPECIFIED 1
 

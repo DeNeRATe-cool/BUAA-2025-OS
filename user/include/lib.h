@@ -101,6 +101,16 @@ int fsipc_remove(const char *);
 int fsipc_sync(void);
 int fsipc_incref(u_int);
 
+int fsipc_key_set(u_int fileid);
+int fsipc_key_unset();
+int fsipc_key_isset();
+
+int fskey_set(int fd);
+int fskey_unset();
+int fskey_isset();
+
+#define O_ENCRYPT 0x0010
+
 // fd.c
 int close(int fd);
 int read(int fd, void *buf, u_int nbytes);

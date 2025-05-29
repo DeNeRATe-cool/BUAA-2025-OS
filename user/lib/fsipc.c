@@ -26,6 +26,32 @@ static int fsipc(u_int type, void *fsreq, void *dstva, u_int *perm) {
 	return ipc_recv(&whom, dstva, perm);
 }
 
+/* user/lib/fsipc.c */
+int fsipc_key_set(u_int fileid) {
+  // 合理调用 fsipc 函数
+	  int r;
+	struct Fsreq_key_set *req;
+
+	req = (struct Fsreq_key_set *)fsipcbuf;
+	req->req_fileid = fileid;
+	if((r = fsipc(FSREQ_KEY_SET, req, 0, 0)) < 0) return r;
+	return 0;
+}
+
+int fsipc_key_unset(void) {
+  // 合理调用 fsipc 函数
+	int r;
+	if((r = fsipc(FSREQ_KEY_UNSET, 0, 0, 0)) < 0) return r;
+	return 0;
+}
+
+int fsipc_key_isset(void) {
+  // 合理调用 fsipc 函数
+	int r;
+	if((r = fsipc(FSREQ_KEY_UNSET, 0, 0, 0)) < 0) return r;
+	return 0;
+}
+
 // Overview:
 //  Send file-open request to the file server. Includes path and
 //  omode in request, sets *fileid and *size from reply.
