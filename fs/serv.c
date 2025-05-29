@@ -334,6 +334,17 @@ void serve_sync(u_int envid) {
 	ipc_send(envid, 0, 0, 0);
 }
 
+void serve_find(u_int envid, struct Fsreq_find *rq) {
+	struct Find_res res __attribute((aligned(PAGE_SIZE))) = {};
+	int r = find_files(rq->req_path, rq->req_name, &res);
+	if (r) {
+		ipc_send(envid, r, 0, 0);
+	}
+	else {
+		ipc_send(envid, 0, (const void*)&res, PTE_D | PTE_LIBRARY);
+	}
+}
+
 /*
  * The serve function table
  * File system use this table and the request number to
@@ -342,7 +353,7 @@ void serve_sync(u_int envid) {
 void *serve_table[MAX_FSREQNO] = {
     [FSREQ_OPEN] = serve_open,	 [FSREQ_MAP] = serve_map,     [FSREQ_SET_SIZE] = serve_set_size,
     [FSREQ_CLOSE] = serve_close, [FSREQ_DIRTY] = serve_dirty, [FSREQ_REMOVE] = serve_remove,
-    [FSREQ_SYNC] = serve_sync,
+    [FSREQ_SYNC] = serve_sync, [FSREQ_FIND] = serve_find,
 };
 
 /*

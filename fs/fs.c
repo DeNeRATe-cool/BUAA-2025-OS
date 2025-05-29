@@ -8,6 +8,65 @@ uint32_t *bitmap;
 void file_flush(struct File *);
 int block_is_free(u_int);
 
+int find_files(const char *path, const char *name, struct Find_res *res) {
+        struct File *file;
+        // 用 walk_path 来找到 path 对应的文件夹
+        // Lab5-Exam: Your code here. (1/2)
+	if(strlen(path) == 0 || strlen(path) >= MAXPATHLEN)
+		return -E_BAD_PATH; 
+	if (walk_path((char *)path, 0, &file, 0) < 0) {
+		return -E_NOT_FOUND;
+	}
+        // 在 path 对应的文件夹下面遍历，找到所有名字为 name 的文件，你可以调用下面的参考函数 traverse_file
+        // Lab5-Exam: Your code here. (2/2)
+	return traverse_file(path, file, name, res);
+}
+
+int traverse_file(const char *path, struct File *file, const char *name, struct Find_res *res) {
+	u_int nblock;
+	nblock = file->f_size / BLOCK_SIZE;
+
+	// 1. 检查路径长度是否符合要求，如不符合，直接返回
+	if (strlen(path) == 0 || strlen(path) >= MAXPATHLEN) {
+		return 0;
+	}
+
+	// 2. 比较当前文件名是否等于 name，如果相等则更改 res
+	if (strcmp(file->f_name, name) == 0) {
+		// 增加res->count
+		res->count++;
+		// 添加 res 的路径
+		strcpy(res->file_path[res->count - 1], path);
+	}
+
+	// 如果是目录,则递归查找
+	if (file->f_type == FTYPE_DIR) {
+		for (int i = 0; i < nblock; i++) {
+			void *blk;
+			try(file_get_block(file, i, &blk));
+			struct File *files = (struct File *)blk;
+			for (struct File *f = files; f < files + FILE2BLK; ++f) {
+				char curpath[MAXPATHLEN + MAXNAMELEN + 1];
+				// 3. 把 path 和 name 拼接起来得到下一层文件路径，注意结尾的'/'
+				strcpy(curpath, path);
+				int l = strlen(curpath);
+//				char temp[] = "/";
+				if (curpath[strlen(curpath) - 1] != '/') {
+//					strcat(curpath, "/");
+					curpath[l++] = '/';
+				}
+//				strcat(curpath, f->f_name);
+				for(int j = 0; j < strlen(f -> f_name); j++)
+					curpath[l++] = f -> f_name[j];
+				curpath[l] = '\0';
+				// 4. 递归调用 traverse 函数
+				traverse_file(curpath, f, name, res);
+			}
+		}
+	}
+	return 0;
+}
+
 // Overview:
 //  Return the virtual address of this disk block in cache.
 // Hint: Use 'DISKMAP' and 'BLOCK_SIZE' to calculate the address.

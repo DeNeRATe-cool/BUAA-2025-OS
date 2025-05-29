@@ -19,6 +19,10 @@ struct Dev devfile = {
     .dev_stat = file_stat,
 };
 
+int find(const char *path, const char *name, struct Find_res *res) {
+	return fsipc_find(path, name, res);
+}
+
 // Overview:
 //  Open a file (or directory).
 //

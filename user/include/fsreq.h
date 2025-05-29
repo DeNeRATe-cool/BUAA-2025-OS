@@ -14,7 +14,13 @@ enum {
 	FSREQ_DIRTY,
 	FSREQ_REMOVE,
 	FSREQ_SYNC,
+	FSREQ_FIND,
 	MAX_FSREQNO,
+};
+
+struct Fsreq_find {
+    	char req_path[MAXPATHLEN];
+    	char req_name[MAXNAMELEN];
 };
 
 struct Fsreq_open {
