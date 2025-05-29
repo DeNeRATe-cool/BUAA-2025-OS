@@ -2,7 +2,6 @@
 #define _FS_H_ 1
 
 #include <stdint.h>
-
 // File nodes (both in-memory and on-disk)
 
 // Bytes per file system block - same as page size
@@ -10,10 +9,10 @@
 #define BLOCK_SIZE_BIT (BLOCK_SIZE * 8)
 
 // Maximum size of a filename (a single path component), including null
-#define MAXNAMELEN 128
+#define MAXNAMELEN 64
 
 // Maximum size of a complete pathname, including null
-#define MAXPATHLEN 1024
+#define MAXPATHLEN 64
 
 // Number of (direct) block pointers in a File descriptor
 #define NDIRECT 10
@@ -30,7 +29,8 @@ struct File {
 	uint32_t f_direct[NDIRECT];
 	uint32_t f_indirect;
 
-	struct File *f_dir; // the pointer to the dir where this file is in, valid only in memory.
+	struct File *f_dir; // the pointer to the dir where this file is in, valid
+			    // only in memory.
 	char f_pad[FILE_STRUCT_SIZE - MAXNAMELEN - (3 + NDIRECT) * 4 - sizeof(void *)];
 } __attribute__((aligned(4), packed));
 

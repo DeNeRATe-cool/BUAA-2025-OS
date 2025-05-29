@@ -13,6 +13,12 @@
 #define envs ((const volatile struct Env *)UENVS)
 #define pages ((const volatile struct Page *)UPAGES)
 
+#define MAXPATHNUM ((PAGE_SIZE - sizeof(int)) / MAXPATHLEN)
+struct Find_res {
+	char file_path[MAXPATHNUM][MAXPATHLEN];
+	int count;
+};
+
 // libos
 void exit(void) __attribute__((noreturn));
 
@@ -118,6 +124,7 @@ int read_map(int fd, u_int offset, void **blk);
 int remove(const char *path);
 int ftruncate(int fd, u_int size);
 int sync(void);
+int find(const char *path, const char *name, struct Find_res *res);
 
 #define user_assert(x)                                                                             \
 	do {                                                                                       \
