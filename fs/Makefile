@@ -3,6 +3,8 @@ tools_dir   := ../tools
 INCLUDES    := -I../include -I$(user_dir)/include
 
 include $(user_dir)/include.mk
+include $(user_dir)/new.mk
+
 USERLIB     := $(addprefix $(user_dir)/, $(USERLIB))
 USERAPPS    := $(addprefix $(user_dir)/, $(USERAPPS))
 

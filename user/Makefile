@@ -3,6 +3,7 @@ INCLUDES    := -I../include -Iinclude
 tools_dir   := ../tools
 
 include include.mk
+include new.mk
 
 .PRECIOUS: %.b %.b.c
 
