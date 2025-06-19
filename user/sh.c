@@ -168,6 +168,19 @@ int parsecmd(char **argv, int *rightpipe) {
 			// user_panic("| not implemented");
 
 			break;
+		// 支持 ;
+		case ';':
+			if((r = fork()) < 0) {
+				debugf("fork: %d\n", r);
+				exit();
+			}
+			*rightpipe = r;
+			if(r == 0) return argc;
+			else {
+				wait(r);
+				return parsecmd(argv, rightpipe);
+			}
+			break;
 		}
 	}
 
@@ -275,6 +288,14 @@ int main(int argc, char **argv) {
 
 		if (buf[0] == '#') {
 			continue;
+		}
+		// 注释
+		int i;
+		for(i = 0; buf[i]; i += 1) {
+			if(buf[i] == '#') {
+				buf[i] = '\0';
+				break;
+			}
 		}
 		if (echocmds) {
 			printf("# %s\n", buf);
