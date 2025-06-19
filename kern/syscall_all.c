@@ -507,7 +507,10 @@ int sys_read_dev(u_int va, u_int pa, u_int len) {
 
 // 设置路径
 void sys_chdir(const char *path)  {
-	strcpy(curenv->full_path, path);
+	struct Env * parent;
+	envid2env(curenv -> env_parent_id, &parent, 0);
+	strcpy(parent -> full_path, path);
+	// strcpy(curenv->full_path, path);
 	return;
 }
 

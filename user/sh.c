@@ -65,6 +65,35 @@ int gettoken(char *s, char **p1) {
 
 #define MAXARGS 128
 
+int parsecmdlist(char **cmds, char *s) {
+	while (*s && strchr(WHITESPACE SYMBOLS, *s)) {
+		s++;
+	}
+	if (*s == 0) {
+		return 0;
+	}
+	int cnt = 1, flag = 1;
+	cmds[0] = s;
+	while (*s)
+	{
+		if (*s == ';') {
+			*s = 0;
+			s++;
+			while (*s && strchr(WHITESPACE SYMBOLS, *s)) {
+				s++;
+			}
+			if (*s == 0) {
+				return cnt;
+			} else {
+				cmds[cnt++] = s;
+			}
+		} else {
+			s++;
+		}
+	}
+	return cnt;
+}
+
 int parsecmd(char **argv, int *rightpipe) {
 	int argc = 0;
 	while (1) {
@@ -232,35 +261,43 @@ int command_pwd(int argc, char *argv[]) {
 	return 0;
 }
 
-void runcmd(char *s) {
-	gettoken(s, 0);
+void runcmd(char *s_all) {
+	char *cmd_list[MAXARGS];
+	int cmd_cnt = parsecmdlist(cmd_list, s_all), i;
+	for(i = 0; i < cmd_cnt; i++) {
+		int lst = (i == cmd_cnt - 1);
+		char *s = cmd_list[i];
+		gettoken(s, 0);
 
-	char *argv[MAXARGS];
-	int rightpipe = 0;
-	int argc = parsecmd(argv, &rightpipe);
-	if (argc == 0) {
-		return;
-	}
-	argv[argc] = 0;
+		char *argv[MAXARGS];
+		int rightpipe = 0, r;
+		int argc = parsecmd(argv, &rightpipe);
+		if (argc == 0) {
+			return;
+		}
+		argv[argc] = 0;
 
-	if(strcmp(argv[0], "cd") == 0) 
-		command_cd(argc, argv + 1);
-	else if(strcmp(argv[0], "pwd") == 0)
-		command_pwd(argc, argv + 1);
-	else if(strcmp(argv[0], "exit") == 0)
-		exit();
-	else {
-		int child = spawn(argv[0], argv);
-		close_all();
-		if (child >= 0) {
-			wait(child);
-		} else {
-			debugf("spawn %s: %d\n", argv[0], child);
+		if(strcmp(argv[0], "cd") == 0) {
+			command_cd(argc, argv + 1);
+			if(lst) exit();
+		} else if(strcmp(argv[0], "pwd") == 0) {
+			command_pwd(argc, argv + 1);
+			if(lst) exit();
+		} else if(strcmp(argv[0], "exit") == 0)
+			exit();
+		else {
+			int child = spawn(argv[0], argv);
+			if(lst) close_all();
+			if (child >= 0) {
+				wait(child);
+			} else {
+				debugf("spawn %s: %d\n", argv[0], child);
+			}
+			if (rightpipe) {
+				wait(rightpipe);
+			}
+			if(lst) exit();
 		}
-		if (rightpipe) {
-			wait(rightpipe);
-		}
-		exit();
 	}
 }
 
@@ -343,7 +380,7 @@ int main(int argc, char **argv) {
 			continue;
 		}
 		// 注释
-		int i, judge = 0;
+		int i;
 		for(i = 0; buf[i]; i += 1) {
 			if(buf[i] == '#') {
 				buf[i] = '\0';
@@ -354,9 +391,7 @@ int main(int argc, char **argv) {
 			printf("# %s\n", buf);
 		}
 		
-		judge = (strncmp(buf, "pwd ", 4) == 0 || strcmp(buf, "pwd") == 0 || strncmp(buf, "cd ", 3) == 0 || strcmp(buf, "cd") == 0 || strncmp(buf, "exit ", 5) == 0 || strcmp(buf, "exit") == 0);
-
-		if(judge) {
+		if(strncmp(buf, "exit ", 5) == 0 || strcmp(buf, "exit") == 0) {
 			runcmd(buf);
 		} else {
 			if ((r = fork()) < 0) {
