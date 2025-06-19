@@ -302,29 +302,103 @@ void runcmd(char *s_all) {
 }
 
 void readline(char *buf, u_int n) {
-	int r;
-	for (int i = 0; i < n; i++) {
-		if ((r = read(0, buf + i, 1)) != 1) {
-			if (r < 0) {
-				debugf("read error: %d\n", r);
-			}
+	buf[0] = '\0';
+	int len = 0, pos = 0, r, mode = 0;
+	char c;
+
+	/*
+		左箭头：ESC [ D（对应 ASCII 码：27 91 68）
+		右箭头：ESC [ C（对应 ASCII 码：27 91 67）
+			初始状态：esc_mode = 0
+			ESC 键触发：当读取到 ESC（ASCII 27）时，进入第一阶段转义模式（esc_mode = 1）
+			检测 [ 字符：在 esc_mode = 1 状态下，若下一个字符是 [（ASCII 91），则进入第二阶段转义模式（esc_mode = 2）
+			识别方向键：在 esc_mode = 2 状态下，根据后续字符判断具体方向：
+			D（ASCII 68）表示左箭头
+			C（ASCII 67）表示右箭头
+	*/
+	while(len < n - 1) {
+		if((r = read(0, &c, 1)) != 1) {
+			if(r < 0) debugf("read error: %d\n", r);
 			exit();
 		}
-		if (buf[i] == '\b' || buf[i] == 0x7f) {
-			if (i > 0) {
-				i -= 2;
-			} else {
-				i = -1;
+
+		if(mode == 2) {
+			if(c == 'D') {
+				if(pos > 0) pos -= 1;
+				else printf("\033[C");
+			} else if(c == 'C') {
+				if(pos , len) pos += 1;
+				else printf("\033[D");
 			}
-			if (buf[i] != '\b') {
-				printf("\b");
-			}
+			mode = 0;
+			continue;
+		} else if(mode == 1) {
+			mode = ((c == '[') ? 2 : 0);
+			continue;
 		}
-		if (buf[i] == '\r' || buf[i] == '\n') {
-			buf[i] = 0;
+
+		if(c == 27) mode = 1;
+		else if(c == '\r' || c == '\n') {
+			buf[len] = '\0';
 			return;
+		} else if(c == 0x7f || c == '\b') {
+			int i;
+			if(pos > 0) {
+				// 移动
+				for(i = pos - 1; i < len - 1; i++)
+					buf[i] = buf[i + 1];
+				len -= 1;
+				pos -= 1;
+				buf[len] = '\0';
+
+				printf("\b");
+				if(pos < len) {
+					write(1, buf + pos, len - pos);
+					write(1, " ", 1);
+					for(i = len; i >= pos; i--) 
+						write(1, "\b", 1);
+				} else printf(" \b");
+			}
+		} else if(c <= 126 && c >= 32) {
+			int i;
+			if(pos < len) 
+				for(i = len; i > pos; i -= 1) 
+					buf[i] = buf[i - 1];
+			
+			buf[pos] = c;
+			len += 1, pos += 1;
+			buf[len] = '\0';
+
+			if(pos != len) {
+				write(1, buf + pos, len - pos);
+				for(i = pos; i < len; i += 1) 
+					write(1, "\033[D", 3);
+			}
 		}
 	}
+	// int r;
+	// for (int i = 0; i < n; i++) {
+	// 	if ((r = read(0, buf + i, 1)) != 1) {
+	// 		if (r < 0) {
+	// 			debugf("read error: %d\n", r);
+	// 		}
+	// 		exit();
+	// 	}
+	// 	if (buf[i] == '\b' || buf[i] == 0x7f) {
+	// 		if (i > 0) {
+	// 			i -= 2;
+	// 		} else {
+	// 			i = -1;
+	// 		}
+	// 		if (buf[i] != '\b') {
+	// 			printf("\b");
+	// 		}
+	// 	}
+	// 	if (buf[i] == '\r' || buf[i] == '\n') {
+	// 		buf[i] = 0;
+	// 		return;
+	// 	}
+	// }
 	debugf("line too long\n");
 	while ((r = read(0, buf, 1)) == 1 && buf[0] != '\r' && buf[0] != '\n') {
 		;
