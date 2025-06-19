@@ -15,6 +15,8 @@
 #define ENV_RUNNABLE 1
 #define ENV_NOT_RUNNABLE 2
 
+#define HISMAX 20
+
 // 环境变量
 struct Variable {
 	int type, only; // 局部/全局, 只读/可编辑

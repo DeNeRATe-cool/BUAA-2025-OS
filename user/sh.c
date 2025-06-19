@@ -1,8 +1,12 @@
 #include <args.h>
+#include <fs.h>
 #include <lib.h>
 
 #define WHITESPACE " \t\r\n"
 #define SYMBOLS "<|>&;()"
+
+static int his_cnt = 0, his_id = -1;
+static char his[HISMAX][1024];
 
 /* Overview:
  *   Parse the next token from the string at s.
@@ -64,6 +68,59 @@ int gettoken(char *s, char **p1) {
 }
 
 #define MAXARGS 128
+
+// 记录历史
+void his_save() {
+	int fd, i;
+	if((fd = open("/.mos_history", O_WRONLY | O_CREAT | O_TRUNC)) < 0) {
+		debugf("failed to save history\n");
+        return;
+	}
+
+	for(i = 0; i < his_cnt; i += 1) {
+		int len = strlen(his[i]);
+		write(fd, his[i], len);
+		write(fd, "\n", 1);
+	}
+
+	close(fd);
+}
+
+// 加载历史
+void his_load() {
+	int fd, r, i;
+	char buf[1024];
+	if((fd = open("/.mos_history", O_RDONLY)) < 0) {
+		fd = open("/.mos_history", O_RDONLY | O_CREAT);
+	}
+
+	his_cnt = 0;
+	while(r = read(fd, buf, sizeof(buf))) {
+		if(r < 0) {
+			debugf("read history error\n");
+            close(fd);
+            return;
+		}
+
+		// 从头开始加载
+		char *line = buf;
+		while((*line) != '\0') {
+			char *end = strchr(line, '\n');
+			if(end == NULL) break;
+			*end = '\0';
+
+			if(his_cnt < HISMAX) {
+				strcpy(his[his_cnt++], line);
+			} else {
+				for(i = 0; i < HISMAX; i += 1) 
+					strcpy(his[i], his[i + 1]);
+				strcpy(his[HISMAX - 1], line);
+			}
+			line = end + 1;
+		}
+	}
+	close(fd);
+}
 
 void solve_variable(char * cmd, char * buf) {
 	struct Variable table[32];
@@ -360,7 +417,23 @@ void runcmd(char *s_all) {
 		} else if(strcmp(argv[0], "unset") == 0) {
 			command_unset(argc, argv);
 			if(lst) exit();
-	 	} else if(strcmp(argv[0], "exit") == 0)
+	 	} else if(strcmp(argv[0], "history") == 0) {
+			argc = 2;
+			argv[0] = "/cat";
+			argv[1] = "/.mos_history";
+			
+			int child = spawn(argv[0], argv);
+			if(lst) close_all();
+			if (child >= 0) {
+				wait(child);
+			} else {
+				debugf("spawn %s: %d\n", argv[0], child);
+			}
+			if (rightpipe) {
+				wait(rightpipe);
+			}
+			if(lst) exit();
+		} else if(strcmp(argv[0], "exit") == 0)
 			exit();
 		else {
 			int child = spawn(argv[0], argv);
@@ -380,8 +453,8 @@ void runcmd(char *s_all) {
 
 void readline(char *buf, u_int n) {
 	buf[0] = '\0';
-	int len = 0, pos = 0, r, mode = 0;
-	char c;
+	int len = 0, pos = 0, r, mode = 0, save_cur = 0;
+	char c, cur_line[1024] = {0};
 
 	/*
 		左箭头：ESC [ D（对应 ASCII 码：27 91 68）
@@ -406,7 +479,44 @@ void readline(char *buf, u_int n) {
 			} else if(c == 'C') {
 				if(pos , len) pos += 1;
 				else printf("\033[D");
-			}
+			} else if(c == 'A') {
+				printf("\033[B");
+				if(his_cnt > 0) {
+					if(his_id == -1 && len > 0) {
+						strcpy(cur_line, buf);
+						save_cur = 1;
+					}
+
+					his_id += (his_cnt - 1 > his_id);
+					int i;
+					for(i = 0; i < len; i += 1) 
+						printf("\b \b");
+					
+					strcpy(buf, his[his_id]);
+					len = strlen(buf);
+					pos = len;
+
+					printf("%s", buf);
+				}
+			} else if(c == 'B') {
+				if(his_id >= 0) {
+					his_id -= 1;
+
+					int i;
+					for(i = 0; i < len; i += 1)
+						printf("\b \b");
+
+					if(save_cur && his_id == -1) {
+						strcpy(buf, cur_line);
+						pos = strlen(buf);
+						printf("%s", buf);
+					} else if(his_id >= 0) {
+						strcpy(buf, his[his_id]);
+						pos = strlen(buf);
+						printf("%s", buf);
+					} else buf[0] = '\0', len = pos = 0;
+				}
+ 			}
 			mode = 0;
 			continue;
 		} else if(mode == 1) {
@@ -417,6 +527,7 @@ void readline(char *buf, u_int n) {
 		if(c == 27) mode = 1;
 		else if(c == '\r' || c == '\n') {
 			buf[len] = '\0';
+			printf("\n");
 			return;
 		} else if(c == 0x7f || c == '\b') {
 			int i;
@@ -435,6 +546,7 @@ void readline(char *buf, u_int n) {
 					for(i = len; i >= pos; i--) 
 						write(1, "\b", 1);
 				} else printf(" \b");
+				his_id = -1;
 			}
 		} else if(c <= 126 && c >= 32) {
 			int i;
@@ -451,6 +563,7 @@ void readline(char *buf, u_int n) {
 				for(i = pos; i < len; i += 1) 
 					write(1, "\033[D", 3);
 			}
+			his_id = -1;
 		}
 	}
 	// int r;
@@ -499,6 +612,8 @@ int main(int argc, char **argv) {
 	printf("::                     MOS Shell 2024                      ::\n");
 	printf("::                                                         ::\n");
 	printf(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::\n");
+	// 加载文件内容
+	his_load();
 	ARGBEGIN {
 	case 'i':
 		interactive = 1;
@@ -541,6 +656,19 @@ int main(int argc, char **argv) {
 		if (echocmds) {
 			printf("# %s\n", buf);
 		}
+
+		// 保存到历史中
+		if(buf[0] != '\0') {
+			if(HISMAX == his_cnt) {
+				for(i = 0; i < HISMAX - 1; i += 1)
+					strcpy(his[i], his[i + 1]);
+				his_cnt -= 1;
+			}
+			strcpy(his[his_cnt++], buf);
+			his_save();
+		}
+
+		his_id =-1;
 		
 		if(strncmp(buf, "exit ", 5) == 0 || strcmp(buf, "exit") == 0) {
 			runcmd(buf);
