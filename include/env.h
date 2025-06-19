@@ -50,8 +50,11 @@ struct Env {
 
 	// lab6-shell
 	char full_path[512];
+	
 	struct Variable var[32];
 	int var_cnt;
+	
+	int lst_code;
 };
 
 LIST_HEAD(Env_list, Env);

@@ -5,6 +5,8 @@
 #define WHITESPACE " \t\r\n"
 #define SYMBOLS "<|>&;()"
 
+char rev_buf[1024];
+
 static int his_cnt = 0, his_id = -1;
 static char his[HISMAX][1024];
 
@@ -35,6 +37,24 @@ int _gettoken(char *s, char **p1, char **p2) {
 	}
 	if (*s == 0) {
 		return 0;
+	}
+
+	if(*s == '`') {
+		*p1 = s;
+		s += 1;
+		for(;(*s) && (*s) != '`'; s += 1);
+		*s = '\0';
+		s += 1;
+		*p2 = s;
+		return 'w';
+	}
+
+	if(strncmp(s, ">>", 2) == 0) {
+		*p1 = s;
+		*s++ = 0;
+		*s++ = 0;
+		*p2 = s;
+		return 'a';
 	}
 
 	if (strchr(SYMBOLS, *s)) {
@@ -156,6 +176,28 @@ void solve_variable(char * cmd, char * buf) {
 	// printf("%s\n", buf);
 }
 
+int logiccmd(char **cmds, char *s, char *opt) {
+	int flag = 1, cnt = 1;
+	while(strchr(WHITESPACE SYMBOLS, *s)) s += 1;
+	if(!(*s)) return 0;
+	cmds[0] = s;
+	while(*s) {
+		char c = (*s);
+		if(c == '|' && *(s + 1) == '|' || c == '&' && *(s + 1) == '&') {
+			*s = 0;
+			s += 1;
+			*s = 0;
+			s += 1;
+			while(strchr(WHITESPACE SYMBOLS, *s)) s += 1;
+			if(*s != 0) {
+				opt[cnt - 1] = ((c == '|') ? '|' : '&');
+				cmds[cnt ++] = s;
+			} else return cnt;
+		} else s += 1;
+	}
+	return cnt;
+}
+
 int parsecmdlist(char **cmds, char *s) {
 	while (*s && strchr(WHITESPACE SYMBOLS, *s)) {
 		s++;
@@ -244,6 +286,20 @@ int parsecmd(char **argv, int *rightpipe) {
 			// user_panic("> redirection not implemented");
 
 			break;
+			// 追加写
+		case 'a':
+			if (gettoken(0, &t) != 'w') {
+				debugf("syntax error: > not followed by word\n");
+				exit();
+			}
+			fd = open(t, O_WRONLY | O_CREAT | O_APPEND);
+			if(fd < 0) {
+				debugf("failed to open '%s'\n", t);
+				exit();
+			}
+			dup(fd, 1);
+			close(fd);
+			break;
 		case '|':;
 			/*
 			 * First, allocate a pipe.
@@ -311,19 +367,23 @@ int command_cd(int argc, char *argv[]) {
 	char *path = argv[0];
 	if (argc == 1) {
 		syscall_chdir("/");
+		syscall_set_value(0);
 		return 0;
 	}
 	if (argc > 2) {
+		syscall_set_value(1);
 		printf("Too many args for cd command\n");
 		return 1;
 	}
 	int fd;
 	if ((fd = open(path, O_RDONLY)) < 0) {
+		syscall_set_value(1);
 		printf("cd: The directory '%s' does not exist\n", path);
 		return 1;
 	}
 	struct Filefd *ffd = (struct Filefd *)num2fd(fd);
 	if (ffd -> f_file.f_type != FTYPE_DIR) {
+		syscall_set_value(1);
 		printf("cd: '%s' is not a directory\n", path);
 		return 1;
 	}
@@ -338,17 +398,20 @@ int command_cd(int argc, char *argv[]) {
 		solve_relative_path(buf, buf2);
 		syscall_chdir(buf2);
 	}
+	syscall_set_value(0);
 	return 0;
 }
 
 int command_pwd(int argc, char *argv[]) {
 	if(argc > 1) {
+		syscall_set_value(2);
 		printf("pwd: expected 0 arguments; got %d\n", argc - 1);
 		return 2;
 	}
 	char buf[MAXPATHLEN];
 	syscall_getcwd(buf);
 	printf("%s\n", buf);
+	syscall_set_value(1);
 	return 0;
 }
 
@@ -356,6 +419,7 @@ int command_unset(int argc, char *argv[]) {
 	int r;
 	if((r = syscall_unset(argv[1])) != 0) 
 		debugf("unset: '%s' is readonly\n", argv[1]);
+	syscall_set_value(r);
 	return r;
 }
 
@@ -368,6 +432,7 @@ int command_declare(int argc, char *argv[]) {
 		int cnt = syscall_list(1, buf);
 		for(i = 0; i < cnt; i += 1) 
 			printf("%s=%s\n", buf[i].name, buf[i].val);
+		syscall_set_value(0);
 		return 0;
 	}
 
@@ -384,6 +449,7 @@ int command_declare(int argc, char *argv[]) {
 	if((r = syscall_declare(name, val, type, only)) != 0) {
 		debugf("declare: '%s' is readonly\n", name);
 	}
+	syscall_set_value(r);
 	return r;
 }
 
@@ -391,62 +457,123 @@ void runcmd(char *s_all) {
 	char *cmd_list[MAXARGS];
 	char buf[1024];
 	int cmd_cnt = parsecmdlist(cmd_list, s_all), i;
+	char *subcmds[MAXARGS];
 	for(i = 0; i < cmd_cnt; i++) {
-		int lst = (i == cmd_cnt - 1);
-		solve_variable(cmd_list[i], buf);
-		char *s = buf;
-		gettoken(s, 0);
+		char opt[MAXARGS];
+		int sub_cnt = logiccmd(subcmds, cmd_list[i], opt);
+		int j;
+		for(j = 0; j < sub_cnt; j += 1) {
+			int lst_i = (i == cmd_cnt - 1), lst_j = (j == sub_cnt - 1);
+			solve_variable(cmd_list[i], buf);
+			char *s = buf;
+			gettoken(s, 0);
+	
+			char *argv[MAXARGS];
+			int rightpipe = 0, r, k;
+			int argc = parsecmd(argv, &rightpipe);
+			if (argc == 0) {
+				continue;
+			}
+			argv[argc] = 0;
 
-		char *argv[MAXARGS];
-		int rightpipe = 0, r;
-		int argc = parsecmd(argv, &rightpipe);
-		if (argc == 0) {
-			return;
-		}
-		argv[argc] = 0;
+			// 反引号替换
+			for(k = 0; k < argc; k += 1) {
+				if(argv[k][0] != '`') continue;
+				argv[k][0] = ' ';
+				int p[2];
+				if(pipe(p) < 0) {
+					debugf("failed to create pipe\n");
+					exit();
+				}
+				int id = fork();
+				if(id < 0) {
+					debugf("failed to fork in sh.c\n");
+					exit();
+				}
+				int offset = 0, num = 0;
+				if(id != 0) {
+					close(p[1]);
+					memset(rev_buf, 0, sizeof(rev_buf));
+					while((num = read(p[0], rev_buf + offset, 114)) > 0) 
+						offset += num;
+					close(p[0]);
+					int len = strlen(rev_buf);
+					while(len > 0 && strchr(WHITESPACE, rev_buf[len - 1]))
+						rev_buf[len - 1] = 0, len -= 1;
+					argv[k] = rev_buf;
+				} else {
+					close(p[0]);
+					dup(p[1], 1);
+					close(p[1]);
 
-		if(strcmp(argv[0], "cd") == 0) {
-			command_cd(argc, argv + 1);
-			if(lst) exit();
-		} else if(strcmp(argv[0], "pwd") == 0) {
-			command_pwd(argc, argv + 1);
-			if(lst) exit();
-		} else if(strcmp(argv[0], "declare") == 0) {
-			command_declare(argc, argv);
-			if(lst) exit();
-		} else if(strcmp(argv[0], "unset") == 0) {
-			command_unset(argc, argv);
-			if(lst) exit();
-	 	} else if(strcmp(argv[0], "history") == 0) {
-			argc = 2;
-			argv[0] = "/cat";
-			argv[1] = "/.mos_history";
-			
-			int child = spawn(argv[0], argv);
-			if(lst) close_all();
-			if (child >= 0) {
-				wait(child);
+					char tp[1024] = {0};
+					strcpy(tp, argv[k]);
+					runcmd(tp);
+					exit();
+				}
+			}
+	
+			if(strcmp(argv[0], "cd") == 0) {
+				command_cd(argc, argv + 1);
+				if(rightpipe) wait(rightpipe);
+				if(lst_i && lst_j) exit();
+			} else if(strcmp(argv[0], "pwd") == 0) {
+				command_pwd(argc, argv + 1);
+				if(rightpipe) wait(rightpipe);
+				if(lst_i && lst_j) exit();
+			} else if(strcmp(argv[0], "declare") == 0) {
+				command_declare(argc, argv);
+				if(rightpipe) wait(rightpipe);
+				if(lst_i && lst_j) exit();
+			} else if(strcmp(argv[0], "unset") == 0) {
+				command_unset(argc, argv);
+				if(rightpipe) wait(rightpipe);
+				if(lst_i && lst_j) exit();
+			 } else if(strcmp(argv[0], "history") == 0) {
+				argc = 2;
+				argv[0] = "/cat";
+				argv[1] = "/.mos_history";
+	
+				int child = spawn(argv[0], argv);
+				if(lst_i && lst_j) close_all();
+				if (child >= 0) {
+					wait(child);
+				} else {
+					debugf("spawn %s: %d\n", argv[0], child);
+				}
+				if (rightpipe) {
+					wait(rightpipe);
+				}
+				if(lst_i && lst_j) exit();
+			} else if(strcmp(argv[0], "exit") == 0) {
+				close_all();
+				syscall_env_destroy(0);
 			} else {
-				debugf("spawn %s: %d\n", argv[0], child);
+				int child = spawn(argv[0], argv);
+				if(lst_i && lst_j) close_all();
+				if (child >= 0) {
+					wait(child);
+				} else {
+					debugf("spawn %s: %d\n", argv[0], child);
+				}
+				if (rightpipe) {
+					wait(rightpipe);
+				}
+				if(lst_i && lst_j) exit();
 			}
-			if (rightpipe) {
-				wait(rightpipe);
+
+			int code = syscall_get_lst_code();
+			debugf("lst code: %d\n", code);
+			if(j != sub_cnt - 1) {
+				if(code != 0 && opt[j] == '&') {
+					if(i == cmd_cnt - 1) exit();
+					else continue;
+				}
+				if(code == 0 && opt[j] == '|') {
+					if(i == cmd_cnt - 1) exit();
+					else continue;
+				}
 			}
-			if(lst) exit();
-		} else if(strcmp(argv[0], "exit") == 0)
-			exit();
-		else {
-			int child = spawn(argv[0], argv);
-			if(lst) close_all();
-			if (child >= 0) {
-				wait(child);
-			} else {
-				debugf("spawn %s: %d\n", argv[0], child);
-			}
-			if (rightpipe) {
-				wait(rightpipe);
-			}
-			if(lst) exit();
 		}
 	}
 }
@@ -492,7 +619,7 @@ void readline(char *buf, u_int n) {
 					for(i = 0; i < len; i += 1) 
 						printf("\b \b");
 					
-					strcpy(buf, his[his_id]);
+					strcpy(buf, his[his_cnt - his_id - 1]);
 					len = strlen(buf);
 					pos = len;
 
@@ -511,7 +638,7 @@ void readline(char *buf, u_int n) {
 						pos = strlen(buf);
 						printf("%s", buf);
 					} else if(his_id >= 0) {
-						strcpy(buf, his[his_id]);
+						strcpy(buf, his[his_cnt - his_id - 1]);
 						pos = strlen(buf);
 						printf("%s", buf);
 					} else buf[0] = '\0', len = pos = 0;
@@ -684,5 +811,6 @@ int main(int argc, char **argv) {
 			}
 		}
 	}
+	syscall_set_value(0);
 	return 0;
 }

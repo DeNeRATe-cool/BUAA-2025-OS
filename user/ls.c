@@ -87,5 +87,6 @@ int main(int argc, char **argv) {
 		}
 	}
 	printf("\n");
+	syscall_set_value(0);
 	return 0;
 }

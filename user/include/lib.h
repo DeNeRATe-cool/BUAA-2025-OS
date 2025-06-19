@@ -73,6 +73,10 @@ void syscall_getcwd(char *buf);
 int syscall_declare(char *key, char *val, int type, int readonly);
 int syscall_list(int is_parent, struct Variable *buf);
 int syscall_unset(char *key);
+void syscall_set_value(int val);
+void syscall_push_value();
+int syscall_get_lst_code();
+
 
 
 // ipc.c
@@ -137,6 +141,7 @@ void solve_relative_path(char *path, char *buf);
 #define O_WRONLY 0x0001	 /* open for writing only */
 #define O_RDWR 0x0002	 /* open for reading and writing */
 #define O_ACCMODE 0x0003 /* mask for above modes */
+#define O_APPEND 0x0004
 #define O_CREAT 0x0100	 /* create if nonexistent */
 #define O_TRUNC 0x0200	 /* truncate to zero length */
 

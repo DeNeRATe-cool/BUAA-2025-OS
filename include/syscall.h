@@ -27,6 +27,9 @@ enum {
 	SYS_declare,
 	SYS_unset,
 	SYS_list,
+	SYS_set_value,
+	SYS_push_value,
+	SYS_get_lst_code,
 	MAX_SYSNO,
 };
 

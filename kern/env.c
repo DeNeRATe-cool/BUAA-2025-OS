@@ -268,6 +268,7 @@ int env_alloc(struct Env **new, u_int parent_id) {
 
 	// 处理默认绝对路径, 可与父进程交流
 	e -> var_cnt = 0;
+	e -> lst_code = 0;
 	int i;
 	if(parent_id != 0) {
 		struct Env * parent;

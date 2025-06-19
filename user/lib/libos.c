@@ -8,6 +8,7 @@ void exit(void) {
 	close_all();
 #endif
 
+	syscall_push_value();
 	syscall_env_destroy(0);
 	user_panic("unreachable code");
 }

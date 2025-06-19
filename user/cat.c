@@ -32,5 +32,6 @@ int main(int argc, char **argv) {
 			}
 		}
 	}
+	syscall_set_value(0);
 	return 0;
 }

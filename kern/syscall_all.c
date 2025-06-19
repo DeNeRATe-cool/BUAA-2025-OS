@@ -578,6 +578,20 @@ int sys_unset(char *key) {
 	return 0;
 }
 
+void sys_set_value(int val) {
+	curenv -> lst_code = val;
+}
+
+void sys_push_value() {
+	struct Env *par;
+	envid2env(curenv -> env_parent_id, &par, 0);
+	par -> lst_code = curenv -> lst_code;
+}
+
+int sys_get_lst_code() {
+	return curenv -> lst_code;
+}
+
 void *syscall_table[MAX_SYSNO] = {
     [SYS_putchar] = sys_putchar,
     [SYS_print_cons] = sys_print_cons,
@@ -602,7 +616,9 @@ void *syscall_table[MAX_SYSNO] = {
 	[SYS_declare] = sys_declare,
 	[SYS_list] = sys_list,
 	[SYS_unset] = sys_unset,
-
+	[SYS_set_value] = sys_set_value,
+	[SYS_push_value] = sys_push_value,
+	[SYS_get_lst_code] = sys_get_lst_code,
 };
 
 /* Overview:

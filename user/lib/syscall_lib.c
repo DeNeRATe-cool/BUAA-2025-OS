@@ -94,3 +94,15 @@ int syscall_list(int is_parent, struct Variable *buf) {
 int syscall_unset(char *key) {
 	return msyscall(SYS_unset, key);
 }
+
+void syscall_set_value(int val) {
+	msyscall(SYS_set_value, val);
+}
+
+void syscall_push_value() {
+	msyscall(SYS_push_value);
+}
+
+int syscall_get_lst_code() {
+	return msyscall(SYS_get_lst_code);
+}
