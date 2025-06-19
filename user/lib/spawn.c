@@ -116,7 +116,7 @@ int spawn(char *prog, char **argv) {
 	// }
 
 	// 兼容 .b / nothing
-	char ptmp[512] = {};
+	char ptmp[512] = {0};
 	strcpy(ptmp, prog);
 	int plen = strlen(prog);
 	ptmp[plen ++] = '.';

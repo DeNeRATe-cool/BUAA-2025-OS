@@ -505,6 +505,18 @@ int sys_read_dev(u_int va, u_int pa, u_int len) {
 	return -E_INVAL;
 }
 
+// 设置路径
+void sys_chdir(const char *path)  {
+	strcpy(curenv->full_path, path);
+	return;
+}
+
+// 获取路径
+void sys_getcwd(char *buf) {
+	strcpy(buf, curenv->full_path);
+	return;
+}
+
 void *syscall_table[MAX_SYSNO] = {
     [SYS_putchar] = sys_putchar,
     [SYS_print_cons] = sys_print_cons,
@@ -524,6 +536,8 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_cgetc] = sys_cgetc,
     [SYS_write_dev] = sys_write_dev,
     [SYS_read_dev] = sys_read_dev,
+	[SYS_chdir] = sys_chdir,
+	[SYS_getcwd] = sys_getcwd,
 };
 
 /* Overview:

@@ -74,3 +74,11 @@ int syscall_read_dev(void *va, u_int dev, u_int size) {
 	/* Exercise 5.2: Your code here. (2/2) */
 	return msyscall(SYS_read_dev, va, dev, size);
 }
+
+void syscall_chdir(const char *path) {
+	return msyscall(SYS_chdir, path);
+}
+
+void syscall_getcwd(char *buf) {
+	return msyscall(SYS_getcwd, buf);
+}

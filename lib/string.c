@@ -95,3 +95,30 @@ int strcmp(const char *p, const char *q) {
 
 	return 0;
 }
+
+int strncmp(const char *p, const char *q, int n) {
+	int cnt = 1;
+	while (*p && *p == *q)
+	{
+		p++, q++, cnt++;
+	}
+	if (cnt > n) {
+		return 0;
+	}
+	if ((u_int)*p < (u_int)*q) {
+		return -1;
+	}
+
+	if ((u_int)*p > (u_int)*q) {
+		return 1;
+	}
+
+	return 0;
+}
+
+char *strcat(char *dst, const char *src) {
+	char *ret = dst;
+	dst += strlen(dst);
+	strcpy(dst, src);
+	return ret;
+}

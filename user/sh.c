@@ -187,6 +187,51 @@ int parsecmd(char **argv, int *rightpipe) {
 	return argc;
 }
 
+int command_cd(int argc, char *argv[]) {
+	char *path = argv[0];
+	if (argv[0] == 0) {
+		syscall_chdir("/");
+		return 0;
+	}
+	if (argc > 2) {
+		printf("Too many args for cd command\n");
+		return 1;
+	}
+	int fd;
+	if ((fd = open(path, O_RDONLY)) < 0) {
+		printf("cd: The directory '%s' does not exist\n", path);
+		return 1;
+	}
+	struct Filefd *ffd = (struct Filefd *)num2fd(fd);
+	if (ffd -> f_file.f_type != FTYPE_DIR) {
+		printf("cd: '%s' is not a directory\n", path);
+		return 1;
+	}
+	if(path[0] == '/') {
+		syscall_chdir(path);
+	} else {
+		char buf[MAXPATHLEN], buf2[MAXPATHLEN];
+		syscall_getcwd(buf);
+		int len = strlen(buf);
+		if(buf[len - 1] != '/') strcat(buf, "/");
+		strcat(buf, path);
+		solve_relative_path(buf, buf2);
+		syscall_chdir(buf2);
+	}
+	return 0;
+}
+
+int command_pwd(int argc, char *argv[]) {
+	if(argc > 1) {
+		printf("pwd: expected 0 arguments; got %d\n", argc - 1);
+		return 2;
+	}
+	char buf[MAXPATHLEN];
+	syscall_getcwd(buf);
+	printf("%s\n", buf);
+	return 0;
+}
+
 void runcmd(char *s) {
 	gettoken(s, 0);
 
@@ -198,17 +243,25 @@ void runcmd(char *s) {
 	}
 	argv[argc] = 0;
 
-	int child = spawn(argv[0], argv);
-	close_all();
-	if (child >= 0) {
-		wait(child);
-	} else {
-		debugf("spawn %s: %d\n", argv[0], child);
+	if(strcmp(argv[0], "cd") == 0) 
+		command_cd(argc, argv + 1);
+	else if(strcmp(argv[0], "pwd") == 0)
+		command_pwd(argc, argv + 1);
+	else if(strcmp(argv[0], "exit") == 0)
+		exit();
+	else {
+		int child = spawn(argv[0], argv);
+		close_all();
+		if (child >= 0) {
+			wait(child);
+		} else {
+			debugf("spawn %s: %d\n", argv[0], child);
+		}
+		if (rightpipe) {
+			wait(rightpipe);
+		}
+		exit();
 	}
-	if (rightpipe) {
-		wait(rightpipe);
-	}
-	exit();
 }
 
 void readline(char *buf, u_int n) {
@@ -290,7 +343,7 @@ int main(int argc, char **argv) {
 			continue;
 		}
 		// 注释
-		int i;
+		int i, judge = 0;
 		for(i = 0; buf[i]; i += 1) {
 			if(buf[i] == '#') {
 				buf[i] = '\0';
@@ -300,14 +353,21 @@ int main(int argc, char **argv) {
 		if (echocmds) {
 			printf("# %s\n", buf);
 		}
-		if ((r = fork()) < 0) {
-			user_panic("fork: %d", r);
-		}
-		if (r == 0) {
+		
+		judge = (strncmp(buf, "pwd ", 4) == 0 || strcmp(buf, "pwd") == 0 || strncmp(buf, "cd ", 3) == 0 || strcmp(buf, "cd") == 0 || strncmp(buf, "exit ", 5) == 0 || strcmp(buf, "exit") == 0);
+
+		if(judge) {
 			runcmd(buf);
-			exit();
 		} else {
-			wait(r);
+			if ((r = fork()) < 0) {
+				user_panic("fork: %d", r);
+			}
+			if (r == 0) {
+				runcmd(buf);
+				exit();
+			} else {
+				wait(r);
+			}
 		}
 	}
 	return 0;

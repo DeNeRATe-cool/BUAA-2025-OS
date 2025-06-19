@@ -9,5 +9,7 @@ size_t strlen(const char *s);
 char *strcpy(char *dst, const char *src);
 const char *strchr(const char *s, int c);
 int strcmp(const char *p, const char *q);
+char *strcat(char *dst, const char *src);
+int strncmp(const char *p, const char *q, int n);
 
 #endif

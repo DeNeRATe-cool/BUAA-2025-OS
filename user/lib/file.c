@@ -19,6 +19,31 @@ struct Dev devfile = {
     .dev_stat = file_stat,
 };
 
+void solve_relative_path(char *path, char *buf) {
+	strcpy(buf, path);
+	char * p = buf, * q = buf;
+	while((*p) != '\0') {
+		if(strncmp(p, "/../", 4) == 0) {
+			p += 3;
+			while(q > buf && *(--q) != '/');
+		} else if(strncmp(p, "/./", 3) == 0) {
+			p += 2;
+		} else if(strcmp(p, "/..") == 0) {
+			p[2] = '\0';
+			while(q > buf && *(--q) != '/');
+		} else if(strcmp(p, "/.") == 0)
+			p[1] = '\0';
+		else {
+			*q = *p;
+			q += 1, p += 1;
+		}
+	}
+	*q = '\0';
+	if(*--q == '/' && q != buf) {
+		*q = '\0';
+	}
+}
+
 // Overview:
 //  Open a file (or directory).
 //
@@ -28,6 +53,21 @@ struct Dev devfile = {
 // 打开文件或目录
 // 成功返回文件描述符否则返回错误码
 int open(const char *path, int mode) {
+	// 开文件时先进行 "相对" 路径处理
+	if(path[0] != '/') {
+		char buf[MAXPATHLEN], tmp[MAXPATHLEN];
+		syscall_getcwd(buf);
+		strcpy(tmp, buf);
+		int len = strlen(tmp);
+		if(tmp[len - 1] != '/') strcat(tmp, "/");
+		strcat(tmp, path);
+		path = tmp;
+	}
+	if(strchr(path, '.') != NULL) {
+		char buf[MAXPATHLEN];
+		solve_relative_path(path, buf);
+		path = buf;
+	}
 	int r;
 
 	// Step 1: Alloc a new 'Fd' using 'fd_alloc' in fd.c.
@@ -250,7 +290,21 @@ int ftruncate(int fdnum, u_int size) {
 //  Delete a file or directory.
 int remove(const char *path) {
 	// Call fsipc_remove.
-
+	// 开文件时先进行 "相对" 路径处理
+	if(path[0] != '/') {
+		char buf[MAXPATHLEN], tmp[MAXPATHLEN];
+		syscall_getcwd(buf);
+		strcpy(tmp, buf);
+		int len = strlen(tmp);
+		if(tmp[len - 1] != '/') strcat(tmp, "/");
+		strcat(tmp, path);
+		path = tmp;
+	}
+	if(strchr(path, '.') != NULL) {
+		char buf[MAXPATHLEN];
+		solve_relative_path(path, buf);
+		path = buf;
+	}
 	/* Exercise 5.13: Your code here. */
 	return fsipc_remove(path);
 }

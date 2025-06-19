@@ -671,6 +671,7 @@ int file_create(char *path, struct File **file) {
 	}
 
 	strcpy(f->f_name, name);
+	f -> f_dir = dir;
 	*file = f;
 	return 0;
 }
