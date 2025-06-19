@@ -267,11 +267,20 @@ int env_alloc(struct Env **new, u_int parent_id) {
 	e->env_tf.regs[29] = USTACKTOP - sizeof(int) - sizeof(char **);
 
 	// 处理默认绝对路径, 可与父进程交流
+	e -> var_cnt = 0;
+	int i;
 	if(parent_id != 0) {
 		struct Env * parent;
 		envid2env(parent_id, &parent, 0);
 		strcpy(e -> full_path, parent -> full_path);
-	} else strcpy(e -> full_path, "/");
+		for(i = 0; i < parent -> var_cnt; i++) {
+			if(parent -> var[i].type == 1) {
+				e -> var[e -> var_cnt ++] = parent -> var[i];
+			}
+		}
+	} else {
+		strcpy(e -> full_path, "/");
+	}
 
 	/* Step 5: Remove the new Env from env_free_list. */
 	/* Exercise 3.4: Your code here. (4/4) */

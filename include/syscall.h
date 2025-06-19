@@ -24,6 +24,9 @@ enum {
 	SYS_read_dev,
 	SYS_chdir,
 	SYS_getcwd,
+	SYS_declare,
+	SYS_unset,
+	SYS_list,
 	MAX_SYSNO,
 };
 

@@ -82,3 +82,15 @@ void syscall_chdir(const char *path) {
 void syscall_getcwd(char *buf) {
 	return msyscall(SYS_getcwd, buf);
 }
+
+int syscall_declare(char *key, char *val, int type, int readonly) {
+	return msyscall(SYS_declare, key, val, type, readonly);
+}
+
+int syscall_list(int is_parent, struct Variable *buf) {
+	return msyscall(SYS_list, is_parent, buf);
+}
+
+int syscall_unset(char *key) {
+	return msyscall(SYS_unset, key);
+}

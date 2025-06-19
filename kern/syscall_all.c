@@ -520,6 +520,64 @@ void sys_getcwd(char *buf) {
 	return;
 }
 
+int sys_declare(char *key, char *val, int type, int readonly) {
+	struct Env *par;
+	envid2env(curenv -> env_parent_id, &par, 0);
+	int pos = -1, i;
+	for (i = 0; i < par -> var_cnt; i++) {
+		if (strcmp(key, par -> var[i].name) == 0) {
+			pos = i;
+			break;
+		}
+	}
+	if (pos != -1) {
+		if (par -> var[pos].only) {
+			return -E_INVAL;
+		}
+		strcpy(par -> var[pos].val, val);
+		strcpy(par -> var[pos].name, key);
+		par -> var[pos].type = type;
+		par -> var[pos].only = readonly;
+		return 0;
+	} else {
+		pos = par -> var_cnt++;
+		strcpy(par -> var[pos].val, val);
+		strcpy(par -> var[pos].name, key);
+		par -> var[pos].type = type;
+		par -> var[pos].only = readonly;
+		return 0;
+	}
+}
+
+int sys_list(int is_parent, struct Variable *buf) {
+	struct Env *par;
+	if(!is_parent) {
+		par = curenv;
+	} else envid2env(curenv -> env_parent_id, &par, 0);
+	memcpy(buf, par -> var, (sizeof (struct Variable)) * (par -> var_cnt));
+	return par -> var_cnt;
+}
+
+int sys_unset(char *key) {
+	struct Env *par;
+	envid2env(curenv -> env_parent_id, &par, 0);
+	int pos = -1, i;
+	for (i = 0; i < par -> var_cnt; i++) {
+		if (strcmp(key, par -> var[i].name) == 0) {
+			pos = i;
+			break;
+		}
+	}
+	if(pos == -1) return 0;
+	if(par -> var[pos].only)
+		return -E_INVAL;
+	for (i = pos; i < par -> var_cnt - 1; i++) {
+		par -> var[i] = par -> var[i + 1];
+	}
+	par -> var_cnt--;
+	return 0;
+}
+
 void *syscall_table[MAX_SYSNO] = {
     [SYS_putchar] = sys_putchar,
     [SYS_print_cons] = sys_print_cons,
@@ -541,6 +599,10 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_read_dev] = sys_read_dev,
 	[SYS_chdir] = sys_chdir,
 	[SYS_getcwd] = sys_getcwd,
+	[SYS_declare] = sys_declare,
+	[SYS_list] = sys_list,
+	[SYS_unset] = sys_unset,
+
 };
 
 /* Overview:

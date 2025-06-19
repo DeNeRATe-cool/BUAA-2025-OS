@@ -65,6 +65,40 @@ int gettoken(char *s, char **p1) {
 
 #define MAXARGS 128
 
+void solve_variable(char * cmd, char * buf) {
+	struct Variable table[32];
+	int cnt = syscall_list(1, table);
+    int len = strlen(cmd), lb = 0, i, j;
+    for(i = 0; i < len; i++) {
+        if (cmd[i] != '$') {
+			buf[lb++] = cmd[i];
+        } else {
+			char key[17] = {0}, val[17] = {0};
+            int cur = i;
+            i++;
+            int lkey = 0, lval = 0;
+			char c = cmd[i];
+            while (c && (c == '_' || ('0' <= c && c <= '9') || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z'))) {
+                key[lkey++] = c;
+				c = cmd[++i];
+            }
+            for (j = 0; j < cnt; j++) {
+                if (strcmp(table[j].name, key) == 0) {
+                    strcpy(val, table[j].val);
+                    lval = strlen(val);
+                    break;
+                }
+            }
+            lkey++;
+            for (j = 0; j < lval; j++)
+                buf[lb++] = val[j];
+            i = cur + lkey - 1;
+		}
+    }
+    buf[lb] = 0;
+	// printf("%s\n", buf);
+}
+
 int parsecmdlist(char **cmds, char *s) {
 	while (*s && strchr(WHITESPACE SYMBOLS, *s)) {
 		s++;
@@ -218,7 +252,7 @@ int parsecmd(char **argv, int *rightpipe) {
 
 int command_cd(int argc, char *argv[]) {
 	char *path = argv[0];
-	if (argv[0] == 0) {
+	if (argc == 1) {
 		syscall_chdir("/");
 		return 0;
 	}
@@ -261,12 +295,49 @@ int command_pwd(int argc, char *argv[]) {
 	return 0;
 }
 
+int command_unset(int argc, char *argv[]) {
+	int r;
+	if((r = syscall_unset(argv[1])) != 0) 
+		debugf("unset: '%s' is readonly\n", argv[1]);
+	return r;
+}
+
+int command_declare(int argc, char *argv[]) {
+	int i, r;
+	int only = (argc == 3 && (strchr(argv[1], 'r') != NULL)), type = (argc == 3 && (strchr(argv[1], 'x') != NULL));
+
+	if(argc == 1) {
+		struct Variable buf[32];
+		int cnt = syscall_list(1, buf);
+		for(i = 0; i < cnt; i += 1) 
+			printf("%s=%s\n", buf[i].name, buf[i].val);
+		return 0;
+	}
+
+	char *name = argv[argc - 1], *val = name;
+	while((*val) != '\0') {
+		if((*val) == '=') {
+			*val = 0;
+			val += 1;
+			break;
+		}
+		val += 1;
+	}
+
+	if((r = syscall_declare(name, val, type, only)) != 0) {
+		debugf("declare: '%s' is readonly\n", name);
+	}
+	return r;
+}
+
 void runcmd(char *s_all) {
 	char *cmd_list[MAXARGS];
+	char buf[1024];
 	int cmd_cnt = parsecmdlist(cmd_list, s_all), i;
 	for(i = 0; i < cmd_cnt; i++) {
 		int lst = (i == cmd_cnt - 1);
-		char *s = cmd_list[i];
+		solve_variable(cmd_list[i], buf);
+		char *s = buf;
 		gettoken(s, 0);
 
 		char *argv[MAXARGS];
@@ -283,7 +354,13 @@ void runcmd(char *s_all) {
 		} else if(strcmp(argv[0], "pwd") == 0) {
 			command_pwd(argc, argv + 1);
 			if(lst) exit();
-		} else if(strcmp(argv[0], "exit") == 0)
+		} else if(strcmp(argv[0], "declare") == 0) {
+			command_declare(argc, argv);
+			if(lst) exit();
+		} else if(strcmp(argv[0], "unset") == 0) {
+			command_unset(argc, argv);
+			if(lst) exit();
+	 	} else if(strcmp(argv[0], "exit") == 0)
 			exit();
 		else {
 			int child = spawn(argv[0], argv);

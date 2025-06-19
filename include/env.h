@@ -15,6 +15,12 @@
 #define ENV_RUNNABLE 1
 #define ENV_NOT_RUNNABLE 2
 
+// 环境变量
+struct Variable {
+	int type, only; // 局部/全局, 只读/可编辑
+	char name[17], val[17];
+};
+
 // Control block of an environment (process).
 struct Env {
 	struct Trapframe env_tf;	 // saved context (registers) before switching
@@ -42,6 +48,8 @@ struct Env {
 
 	// lab6-shell
 	char full_path[512];
+	struct Variable var[32];
+	int var_cnt;
 };
 
 LIST_HEAD(Env_list, Env);
