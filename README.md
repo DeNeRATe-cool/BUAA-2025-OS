@@ -1,6 +1,6 @@
 > [课程资料见 HERE DeNeRATe-cool/BUAA_OS_resources](https://github.com/DeNeRATe-cool/BUAA_OS_resources)
 
-- lab 0 ~ 6，可以结合开源仓库进行学习
+- lab 0 ~ 6，可以结合开源仓库的各个分支进行学习
 - 挑战性任务选的 Shell ( SWAP 也有本地代码留存 )
 - lab extra-off 为上机结束后开放用于继续探索 extra
 
